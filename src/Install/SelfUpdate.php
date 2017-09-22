@@ -43,7 +43,19 @@ class SelfUpdate
             throw new Exception('Please set path to folder for json config files in SelfUpdate::$installDir');
         }
 
+        self::createFolder(self::$installDir);
         self::$installDir = rtrim(self::$installDir, '/\\');
+    }
+
+    /**
+     * Создаёт директорию на диске
+     * @return void
+     */
+    private static function createFolder($path)
+    {
+        if (!file_exists($path)) {
+            mkdir($path, 0755, true);
+        }
     }
 
     /**
@@ -74,30 +86,30 @@ class SelfUpdate
             do {
                 self::setUpdating();
 
-            if (isset($rules->details->$from_version)) {
-                
-                $need_version = (version_compare($from_version, $to_version) == -1)
-                    ? self::getNext($from_version)
-                    : self::getPrev($from_version);
+                if (isset($rules->details->$from_version)) {
+                    
+                    $need_version = (version_compare($from_version, $to_version) == -1)
+                        ? self::getNext($from_version)
+                        : self::getPrev($from_version);
 
-                $need_run = (version_compare($from_version, $to_version) == -1)
-                    ? self::getNext($from_version)
-                    : $from_version;
+                    $need_run = (version_compare($from_version, $to_version) == -1)
+                        ? self::getNext($from_version)
+                        : $from_version;
 
-                $className = __NAMESPACE__ . '\\' . $rules->details->$need_run->class;
-                $migration = new $className;
+                    $className = __NAMESPACE__ . '\\' . $rules->details->$need_run->class;
+                    $migration = new $className;
 
-                if (!is_a($migration, __NAMESPACE__ . '\MigrationInterface')) {
-                    throw new Exception('Migration is not implement ' . __NAMESPACE__ . '\MigrationInterface');
-                }
+                    if (!is_a($migration, __NAMESPACE__ . '\MigrationInterface')) {
+                        throw new Exception('Migration is not implement ' . __NAMESPACE__ . '\MigrationInterface');
+                    }
 
-                if (version_compare($from_version, $to_version) == -1) {
-                    $migration->up();
-                } else {
-                    $migration->down();
-                }
+                    if (version_compare($from_version, $to_version) == -1) {
+                        $migration->up();
+                    } else {
+                        $migration->down();
+                    }
 
-                self::setDbVersion($need_version);
+                    self::setDbVersion($need_version);
                     $from_version = $need_version;
                 }
 
@@ -176,6 +188,10 @@ class SelfUpdate
             $dir = self::$installDir;
         }
 
+        if (!file_exists($dir . '/versions.json')) {
+            throw new Exception($dir . '/versions.json Not Found');
+        }
+
         $rules = file_get_contents($dir . '/versions.json');
         $rules = json_decode($rules, true);
 
@@ -232,11 +248,7 @@ class SelfUpdate
     public static function getDbVersion()
     {
         self::checkInit();
-        if (!file_exists(self::$installDir . '/' . self::DB_VERSION_FILE)) {
-            return '0';
-        }
-
-        return file_get_contents(self::$installDir . '/' . self::DB_VERSION_FILE);
+        return self::getVersionFromFile(self::$installDir . '/' . self::DB_VERSION_FILE);
     }
 
     /**
@@ -251,9 +263,51 @@ class SelfUpdate
     }
 
     /**
+     * Получение текущей версии из файла
+     * @param  string $file Путь к файлу с сохранённой версией
+     * @return string PHP-стандартизированная версия структуры БД
+     */
+    public static function getVersionFromFile($file)
+    {
+        if (!file_exists($file)) {
+            return '0';
+        }
+
+        return file_get_contents($file);
+    }
+
+    /**
+     * Получение установленной версии Пакета
+     * @param string $vendor       Название производителя пакета
+     * @param string $package_name Название пакета
+     * @return  void
+     */
+    public static function getPackageVersion($vendor, $package_name)
+    {
+        self::checkInit();
+        $path = self::$installDir . "/modules/$vendor/{$package_name}.version.lock";
+        return self::getVersionFromFile($path);
+    }
+
+    /**
+     * Записывает в файл новую версию Пакета
+     * @param string $version      PHP-стандартизированная версия структуры БД
+     * @param string $vendor       Название производителя пакета
+     * @param string $package_name Название пакета
+     * @return  void
+     */
+    public static function setPackageVersion($version, $vendor, $package_name)
+    {
+        self::checkInit();
+        $dir = self::$installDir . "/modules/$vendor/";
+        self::createFolder($dir);
+        file_put_contents($dir . "{$package_name}.version.lock", $version);
+    }
+
+    /**
      * Возвращает максимальную версию
      * @param  array $rules Данные о версиях, если не указано, то будут использованы версии ядра. OPTIONAL
-     * @return string|null   Максимальная версия
+     * @return string|null  Максимальная версия
      */
     public static function getMaxVersion($rules = null)
     {
