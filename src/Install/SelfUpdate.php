@@ -62,9 +62,12 @@ class SelfUpdate
      * Миграция на указанную версию
      * @param  string $from_version PHP-стандартизированная текущая версия структуры БД
      * @param  string $to_version   PHP-стандартизированная требуемая версия структуры БД
+     * @param  string $rulesDir     Путь к папке с версиями. OPTIONAL
+     * @param  string $vendor       Название производителя пакета. OPTIONAL
+     * @param  string $package_name Название пакета. OPTIONAL
      * @return void
      */
-    public static function updateFromTo($from_version, $to_version)
+    public static function updateFromTo($from_version, $to_version, $rulesDir = null, $vendor = null, $package_name = null)
     {
         if (version_compare($from_version, $to_version) == 0) {
             return $to_version;
@@ -81,7 +84,7 @@ class SelfUpdate
         }
 
         try {
-            $rules = self::getVersions();
+            $rules = self::getVersions($rulesDir);
 
             do {
                 self::setUpdating();
@@ -96,7 +99,10 @@ class SelfUpdate
                         ? self::getNext($from_version)
                         : $from_version;
 
-                    $className = __NAMESPACE__ . '\\' . $rules->details->$need_run->class;
+                    $namespace = (isset($rules->details->$need_run->namespace))
+                        ? $rules->details->$need_run->namespace
+                        : __NAMESPACE__;
+                    $className = $namespace . '\\' . $rules->details->$need_run->class;
                     $migration = new $className;
 
                     if (!is_a($migration, __NAMESPACE__ . '\MigrationInterface')) {
@@ -109,7 +115,11 @@ class SelfUpdate
                         $migration->down();
                     }
 
-                    self::setDbVersion($need_version);
+                    if (!is_null($vendor) && !is_null($package_name)) {
+                        self::setPackageVersion($need_version, $vendor, $package_name);
+                    } else {
+                        self::setDbVersion($need_version);
+                    }
                     $from_version = $need_version;
                 }
 
@@ -302,6 +312,20 @@ class SelfUpdate
         $dir = self::$installDir . "/modules/$vendor/";
         self::createFolder($dir);
         file_put_contents($dir . "{$package_name}.version.lock", $version);
+    }
+
+    /**
+     * Обновляет версию БД пакета
+     * @param string $version      PHP-стандартизированная версия структуры БД
+     * @param  string $rulesDir     Путь к папке с версиями. OPTIONAL
+     * @param string $vendor       Название производителя пакета
+     * @param string $package_name Название пакета
+     * @return  void
+     */
+    public static function updatePackage($version, $rulesDir, $vendor, $package_name)
+    {
+        $currentVersion = self::getPackageVersion($vendor, $package_name);
+        self::updateFromTo($currentVersion, $version, $rulesDir, $vendor, $package_name);
     }
 
     /**
