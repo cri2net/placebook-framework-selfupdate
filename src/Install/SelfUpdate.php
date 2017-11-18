@@ -92,11 +92,11 @@ class SelfUpdate
                 if (isset($rules->details->$from_version)) {
                     
                     $need_version = (version_compare($from_version, $to_version) == -1)
-                        ? self::getNext($from_version)
-                        : self::getPrev($from_version);
+                        ? self::getNext($from_version, $rulesDir)
+                        : self::getPrev($from_version, $rulesDir);
 
                     $need_run = (version_compare($from_version, $to_version) == -1)
-                        ? self::getNext($from_version)
+                        ? self::getNext($from_version, $rulesDir)
                         : $from_version;
 
                     $namespace = (isset($rules->details->$need_run->namespace))
@@ -134,12 +134,13 @@ class SelfUpdate
 
     /**
      * Возвращает следующую по возрастанию версию
-     * @param  string $version PHP-стандартизированная версия
-     * @return string|null     Следующая версия
+     * @param  string $version  PHP-стандартизированная версия
+     * @param  string $rulesDir Путь к папке с версиями. OPTIONAL
+     * @return string|null      Следующая версия
      */
-    public static function getNext($version)
+    public static function getNext($version, $rulesDir = null)
     {
-        $rules = self::getVersions();
+        $rules = self::getVersions($rulesDir);
         $rules = json_decode(json_encode($rules), true); // преобразование в массив
         $min = null;
 
@@ -160,12 +161,13 @@ class SelfUpdate
 
     /**
      * Возвращает предыдущую по возрастанию версию
-     * @param  string $version PHP-стандартизированная версия
-     * @return string|null     Предыдущая версия
+     * @param  string $version  PHP-стандартизированная версия
+     * @param  string $rulesDir Путь к папке с версиями. OPTIONAL
+     * @return string|null      Предыдущая версия
      */
-    public static function getPrev($version)
+    public static function getPrev($version, $rulesDir = null)
     {
-        $rules = self::getVersions();
+        $rules = self::getVersions($rulesDir);
         $rules = json_decode(json_encode($rules), true); // преобразование в массив
         $max = null;
 
