@@ -128,6 +128,13 @@ class SelfUpdate
             } while (version_compare($from_version, $to_version) != 0);
             
         } catch (Exception $e) {
+
+            $message = date('Y.m.d H:i:s');
+            $message .= ' error in ' . __CLASS__ . "\r\n";
+            $message .= "update from $from_version to $to_version\r\n";
+            $message .= (empty($package_name)) ? '' : "package name = $package_name\r\n";
+            @error_log($message . var_export($e, true), 3, self::$installDir . '/update-errors.log');
+            
             return false;
         }
     }
