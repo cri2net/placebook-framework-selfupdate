@@ -121,6 +121,8 @@ class SelfUpdate
                         self::setDbVersion($need_version);
                     }
                     $from_version = $need_version;
+                } else {
+                    throw new Exception("Requested current version $from_version not present in rules (versions.json & custom_versions.json)");
                 }
 
                 self::unsetUpdating();
@@ -133,7 +135,7 @@ class SelfUpdate
             $message .= ' error in ' . __CLASS__ . "\r\n";
             $message .= "update from $from_version to $to_version\r\n";
             $message .= (empty($package_name)) ? '' : "package name = $package_name\r\n";
-            @error_log($message . var_export($e, true), 3, self::$installDir . '/update-errors.log');
+            @error_log($message . var_export($e, true) . "\r\n\r\n\r\n", 3, self::$installDir . '/update-errors.log');
             
             return false;
         }
