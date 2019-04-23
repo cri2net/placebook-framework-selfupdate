@@ -103,9 +103,10 @@ class Migration_sample implements MigrationInterface
 ```
 
 ## Для пакетов
-Файл с версиями необходим только один, в custom_version.json нет необходимости. Рекомендуется иметь такую структуру:
-- /vendor/vendor_name/package_name/versions.json
-- /vendor/vendor_name/package_name/\*\*/  любые полезные классы, в том числе с миграциями
+Файл с версиями необходим только один, в custom_versions.json нет необходимости. Рекомендуется иметь такую структуру:
+
+* /vendor/vendor_name/package_name/versions.json
+* /vendor/vendor_name/package_name/\*\*/  любые полезные классы, в том числе с миграциями
 
 На сайте, раз есть модули, можно вынести работу с SelfUpdate в отдельный файл, который будет подключаться для всех запросов.
 Предлагаемое содержимое:

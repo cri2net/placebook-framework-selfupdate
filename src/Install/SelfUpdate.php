@@ -75,10 +75,6 @@ class SelfUpdate
 
         self::checkInit();
 
-        if (!file_exists(self::$installDir . '/versions.json')) {
-            return false;
-        }
-
         if (self::isUpdating()) {
             return false;
         }
