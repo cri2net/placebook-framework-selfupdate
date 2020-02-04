@@ -18,5 +18,5 @@
             "Placebook\\Framework\\Core\\": "src"
         }
     },
-    "license": "proprietary"
+    "license": "MIT"
 }
