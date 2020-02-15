@@ -73,17 +73,15 @@ class SelfUpdate
             return $to_version;
         }
 
-        self::checkInit();
-
         if (self::isUpdating()) {
             return false;
         }
+        self::setUpdating();
 
         try {
             $rules = self::getVersions($rulesDir);
 
             do {
-                self::setUpdating();
 
                 if (isset($rules->details->$from_version)) {
                     
@@ -120,10 +118,9 @@ class SelfUpdate
                 } else {
                     throw new Exception("Requested current version $from_version not present in rules (versions.json & custom_versions.json)");
                 }
-
-                self::unsetUpdating();
-
             } while (version_compare($from_version, $to_version) != 0);
+
+            self::unsetUpdating();
             
         } catch (Exception $e) {
 
