@@ -54,7 +54,7 @@ class SelfUpdate
     private static function createFolder($path)
     {
         if (!file_exists($path)) {
-            mkdir($path, 0755, true);
+            mkdir($path, 0775, true);
         }
     }
 
@@ -241,6 +241,10 @@ class SelfUpdate
     {
         self::checkInit();
         file_put_contents(self::$installDir . '/updating.lock', '');
+
+        if (!file_exists(self::$installDir . '/updating.lock')) {
+            throw new Exception("Install folder is not writable");
+        }
     }
 
     /**
