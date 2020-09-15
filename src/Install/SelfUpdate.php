@@ -2,26 +2,26 @@
 
 namespace Placebook\Framework\Core\Install;
 
-use \Exception;
+use Exception;
 
 class SelfUpdate
 {
     /**
-     * Название файла, в котором хранится текущая версия БД ядра
+     * Filename that stores the current version of the kernel database
      */
     const DB_VERSION_FILE = 'db_version.lock';
 
     /**
-     * Путь к папке с данными
+     * Path to data folder
      */
     public static $installDir;
 
     /**
-     * Метод сравнивает текущую версию БД с требуемой и запускает обновление при необходимости
-     * @param  string $version PHP-стандартизированная версия структуры БД
+     * Method compares the current version of the database with the required one and starts the update if necessary
+     * @param  string $version PHP standardized version of DB structure
      * @return void
      */
-    public static function updateDbIfLessThen($version)
+    public static function updateDbIfLessThen(string $version)
     {
         $current = self::getDbVersion();
 
@@ -33,8 +33,8 @@ class SelfUpdate
     }
 
     /**
-     * Проверяет установлен ли в статическую переменную путь к рабочей папке модуля.
-     * Запускается перед работой с этой папкой
+     * Checks if the path to the working folder of the module is set in a static variable.
+     * Runs before working with this folder
      * @return void
      */
     private static function checkInit()
@@ -48,10 +48,10 @@ class SelfUpdate
     }
 
     /**
-     * Создаёт директорию на диске
+     * Creates a directory on disk
      * @return void
      */
-    private static function createFolder($path)
+    private static function createFolder(string $path)
     {
         if (!file_exists($path)) {
             mkdir($path, 0775, true);
@@ -59,22 +59,28 @@ class SelfUpdate
     }
 
     /**
-     * Миграция на указанную версию
-     * @param  string $from_version PHP-стандартизированная текущая версия структуры БД
-     * @param  string $to_version   PHP-стандартизированная требуемая версия структуры БД
-     * @param  string $rulesDir     Путь к папке с версиями. OPTIONAL
-     * @param  string $vendor       Название производителя пакета. OPTIONAL
-     * @param  string $package_name Название пакета. OPTIONAL
+     * Migrating to a specified version
+     * @param  string $from_version PHP-standardized current version of DB structure
+     * @param  string $to_version   PHP standardized required version of DB structure
+     * @param  string $rulesDir     Path to the folder with versions. OPTIONAL
+     * @param  string $vendor       Package vendor name. OPTIONAL
+     * @param  string $package_name Package name. OPTIONAL
      * @return void
      */
-    public static function updateFromTo($from_version, $to_version, $rulesDir = null, $vendor = null, $package_name = null)
+    public static function updateFromTo(
+        string $from_version,
+        string $to_version,
+        string $rulesDir = null,
+        string $vendor = null,
+        string $package_name = null
+    )
     {
         if (version_compare($from_version, $to_version) == 0) {
-            return $to_version;
+            return;
         }
 
         if (self::isUpdating()) {
-            return false;
+            return;
         }
         self::setUpdating();
 
@@ -83,7 +89,7 @@ class SelfUpdate
 
             do {
 
-                if (isset($rules->details->$from_version)) {
+                if (isset($rules['details'][$from_version])) {
                     
                     $need_version = (version_compare($from_version, $to_version) == -1)
                         ? self::getNext($from_version, $rulesDir)
@@ -93,10 +99,8 @@ class SelfUpdate
                         ? self::getNext($from_version, $rulesDir)
                         : $from_version;
 
-                    $namespace = (isset($rules->details->$need_run->namespace))
-                        ? $rules->details->$need_run->namespace
-                        : __NAMESPACE__;
-                    $className = $namespace . '\\' . $rules->details->$need_run->class;
+                    $namespace = $rules['details'][$need_run]['namespace'] ?? __NAMESPACE__;
+                    $className = $namespace . '\\' . $rules['details'][$need_run]['class'];
                     $migration = new $className;
 
                     if (!is_a($migration, __NAMESPACE__ . '\MigrationInterface')) {
@@ -129,21 +133,18 @@ class SelfUpdate
             $message .= "update from $from_version to $to_version\r\n";
             $message .= (empty($package_name)) ? '' : "package name = $package_name\r\n";
             @error_log($message . var_export($e, true) . "\r\n\r\n\r\n", 3, self::$installDir . '/update-errors.log');
-            
-            return false;
         }
     }
 
     /**
-     * Возвращает следующую по возрастанию версию
-     * @param  string $version  PHP-стандартизированная версия
-     * @param  string $rulesDir Путь к папке с версиями. OPTIONAL
-     * @return string|null      Следующая версия
+     * Returns the next ascending version
+     * @param  string $version  PHP-standardized version
+     * @param  string $rulesDir Path to the folder with versions. OPTIONAL
+     * @return string|null      Next version
      */
-    public static function getNext($version, $rulesDir = null)
+    public static function getNext(string $version, string $rulesDir = null) : ?string
     {
         $rules = self::getVersions($rulesDir);
-        $rules = json_decode(json_encode($rules), true); // преобразование в массив
         $min = null;
 
         foreach ($rules['details'] as $key => $value) {
@@ -162,15 +163,14 @@ class SelfUpdate
     }
 
     /**
-     * Возвращает предыдущую по возрастанию версию
-     * @param  string $version  PHP-стандартизированная версия
-     * @param  string $rulesDir Путь к папке с версиями. OPTIONAL
-     * @return string|null      Предыдущая версия
+     * Returns the previous ascending version
+     * @param  string $version  PHP-standardized version
+     * @param  string $rulesDir Path to the folder with versions. OPTIONAL
+     * @return string|null      Previous version
      */
-    public static function getPrev($version, $rulesDir = null)
+    public static function getPrev(string $version, string $rulesDir = null) : ?string
     {
         $rules = self::getVersions($rulesDir);
-        $rules = json_decode(json_encode($rules), true); // преобразование в массив
         $max = null;
 
         foreach ($rules['details'] as $key => $value) {
@@ -188,14 +188,14 @@ class SelfUpdate
     }
 
     /**
-     * Получение данных о доступных версиях (обновлениях)
+     * Obtaining data on available versions (updates)
      *
-     * Возвращает результат слияния versions.json с custom_versions.json, если последний существует
+     * Returns the result of merging versions.json with custom_versions.json, if the latter exists
      *
-     * @param  string $dir Путь к папке, где лежат версии
-     * @return \StdClass объект с данными
+     * @param  string $dir The path to the folder where the versions are located
+     * @return array Versions data
      */
-    public static function getVersions($dir = null)
+    public static function getVersions(string $dir = null) : array
     {
         if ($dir === null) {
             self::checkInit();
@@ -214,27 +214,24 @@ class SelfUpdate
             $custom = file_get_contents($dir . '/custom_versions.json');
             $custom = json_decode($custom, true);
 
-            // делаем слияние
             $rules['details'] = array_merge($rules['details'], $custom['details']);
         }
 
-        // преобразование в объект
-        $rules = json_decode(json_encode($rules));
         return $rules;
     }
 
     /**
-     * Проверка: запущено ли в данный момент обновление
+     * Checking whether the update is currently running
      * @return boolean
      */
-    public static function isUpdating()
+    public static function isUpdating() : bool
     {
         self::checkInit();
         return file_exists(self::$installDir . '/updating.lock');
     }
 
     /**
-     * Создание .lock файла для дальнейшего определения, что обновление БД запущено
+     * Create a .lock file to further determine that a database update has started
      * @return void
      */
     public static function setUpdating()
@@ -248,7 +245,7 @@ class SelfUpdate
     }
 
     /**
-     * Удаление .lock файла после обновление БД
+     * Deleting .lock file after database update
      * @return void
      */
     public static function unsetUpdating()
@@ -260,8 +257,8 @@ class SelfUpdate
     }
 
     /**
-     * Получение текущей версии Базы Данных
-     * @return string PHP-стандартизированная версия структуры БД
+     * Getting the current version of the kernel
+     * @return string PHP standardized version of DB structure
      */
     public static function getDbVersion()
     {
@@ -270,22 +267,22 @@ class SelfUpdate
     }
 
     /**
-     * Записывает в файл новую версию Базы Данных
-     * @param string $version PHP-стандартизированная версия структуры БД
+     * Writes a new version of the kernel to a file
+     * @param string $version PHP standardized version of DB structure
      * @return  void
      */
-    public static function setDbVersion($version)
+    public static function setDbVersion(string $version)
     {
         self::checkInit();
         file_put_contents(self::$installDir . '/' . self::DB_VERSION_FILE, $version);
     }
 
     /**
-     * Получение текущей версии из файла
-     * @param  string $file Путь к файлу с сохранённой версией
-     * @return string PHP-стандартизированная версия структуры БД
+     * Getting the current version from a file
+     * @param  string $file The path to the file with the saved version
+     * @return string PHP standardized version of DB structure
      */
-    public static function getVersionFromFile($file)
+    public static function getVersionFromFile($file) : string
     {
         if (!file_exists($file)) {
             return '0';
@@ -295,12 +292,12 @@ class SelfUpdate
     }
 
     /**
-     * Получение установленной версии Пакета
-     * @param string $vendor       Название производителя пакета
-     * @param string $package_name Название пакета
-     * @return  void
+     * Obtaining the installed version of the Package
+     * @param string $vendor       Package vendor name
+     * @param string $package_name Package name
+     * @return string PHP standardized version of Package's DB structure
      */
-    public static function getPackageVersion($vendor, $package_name)
+    public static function getPackageVersion(string $vendor, string $package_name)
     {
         self::checkInit();
         $path = self::$installDir . "/modules/$vendor/{$package_name}.version.lock";
@@ -308,13 +305,13 @@ class SelfUpdate
     }
 
     /**
-     * Записывает в файл новую версию Пакета
-     * @param string $version      PHP-стандартизированная версия структуры БД
-     * @param string $vendor       Название производителя пакета
-     * @param string $package_name Название пакета
-     * @return  void
+     * Writes a new version of the Package to a file
+     * @param string $version      PHP standardized version of DB structure
+     * @param string $vendor       Package vendor name
+     * @param string $package_name Package name
+     * @return void
      */
-    public static function setPackageVersion($version, $vendor, $package_name)
+    public static function setPackageVersion(string $version, string $vendor, string $package_name)
     {
         self::checkInit();
         $dir = self::$installDir . "/modules/$vendor/";
@@ -323,30 +320,29 @@ class SelfUpdate
     }
 
     /**
-     * Обновляет версию БД пакета
-     * @param string $version      PHP-стандартизированная версия структуры БД
-     * @param  string $rulesDir     Путь к папке с версиями. OPTIONAL
-     * @param string $vendor       Название производителя пакета
-     * @param string $package_name Название пакета
-     * @return  void
+     * Updates the DB version of the package
+     * @param string $version      PHP standardized version of DB structure
+     * @param string $rulesDir     Path to the folder with versions. OPTIONAL
+     * @param string $vendor       Package vendor name
+     * @param string $package_name Package name
+     * @return void
      */
-    public static function updatePackage($version, $rulesDir, $vendor, $package_name)
+    public static function updatePackage(string $version, string $rulesDir, string $vendor, string $package_name)
     {
         $currentVersion = self::getPackageVersion($vendor, $package_name);
         self::updateFromTo($currentVersion, $version, $rulesDir, $vendor, $package_name);
     }
 
     /**
-     * Возвращает максимальную версию
-     * @param  array $rules Данные о версиях, если не указано, то будут использованы версии ядра. OPTIONAL
-     * @return string|null  Максимальная версия
+     * Returns the maximum version
+     * @param  mixed $rules Version data, if not specified, kernel versions will be used. OPTIONAL
+     * @return string|null  Maximum version
      */
-    public static function getMaxVersion($rules = null)
+    public static function getMaxVersion($rules = null) : ?string
     {
         if ($rules === null) {
             $rules = self::getVersions();
         }
-        $rules = json_decode(json_encode($rules), true); // преобразование в массив
         $max = null;
 
         foreach ($rules['details'] as $key => $value) {

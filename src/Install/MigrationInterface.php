@@ -2,21 +2,21 @@
 
 namespace Placebook\Framework\Core\Install;
 
-use \Exception;
+use Exception;
 
 /**
- * Интерфейс для миграций структуры БД.
+ * Interface for migrating the database structure.
  */
 interface MigrationInterface
 {
     /**
-     * Этот метод применяет миграцию (повышает версию)
+     * This method applies migration (update)
      * @return void
      */
     public static function up();
     
     /**
-     * Этот метод откатывает миграцию (понижает версию)
+     * This method rolls back the migration (downgrade)
      * @return void
      */
     public static function down();

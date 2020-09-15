@@ -1,18 +1,19 @@
 # ReadMe
 
-Пакет предназначен для полуавтоматического обновления структуры БД для ядра проекта или сторонних пакетов.
+The package is intended for semi-automatic updating of the database structure for the project core or third-party packages.
 
-Этот пакет является частью Placebook\Framework, однако, его можно использовать и для сторонних проектов. Также, его можно использовать не только для sql миграций, а и для любых других обратимых миграций.
+This package is part of the Placebook\Framework, but it can be used for any of your own projects. Also, it can be used not only for sql migrations, but also for any other reversible migrations.
 
-## Принцип работы для ядра
-В проекте присутствует папка для этого пакета. Например, /install
-Путь к этой папке передан пакету:
+## How it works for the kernel
+The project contains a folder for this package. for example, /install
+The path to this folder was passed to the package:
 
 ```php
-use \Placebook\Framework\Core\Install\SelfUpdate;
+use Placebook\Framework\Core\Install\SelfUpdate;
+
 SelfUpdate::$installDir = ROOT . '/install';
 ```
-В этой директории находится файл versions.json и custom_versions.json следующего содержимого:
+This directory contains the versions.json file and custom_versions.json with the following content:
 
 ```json
 {
@@ -24,51 +25,51 @@ SelfUpdate::$installDir = ROOT . '/install';
     }
 }
 ```
-Тут идёт описание версий. По умолчанию, имена классов находятся в namespace Placebook\Framework\Core\Install\, но можно указать другой namespace.
-Версии ядра всегда будут увеличить только первое число версии и находиться в **versions.json**. Тогда конкретный сайт может взять себе актуальную версию ядра, например, 3.0.0, и увеличить версии как угодно, но не увеличивая первое число 3. И хранить свои версии в файле **custom_versions.json**. Пакет сделает слияние обоих файлов и сможет обновиться с нуля до максимальной версии ядра, а потом до максимальной версии конкретного проекта.
-При этом, конкретный проект, который уже работает и имеет свои миграции, сможет обновить себе версию ядра, а с ней обновится и **versions.json**. Например, там появится версия 4.0.0. Тогда пакет обновит ядро, а дальше проект должен будет своим миграциям назначать версии >4.0.0
-Ядро Placebook\Framework не будет сохранять свои версии в файле **custom_versions.json**, он только для пользователей фреймворка.
-Таким образом, пакет будет хорошо и автоматически работать и с миграциями ядра, и проекта.
+Here is the version description. By default, class names are in namespace Placebook\Framework\Core\Install\, but another namespace can be specified.
+Kernel versions will always increase only the first version number and be in **versions.json**. Then a specific site can take the current version of the kernel, eg, 3.0.0, and increase the versions as you like, but without increasing the major part of the version (3). And store your versions in a file **custom_versions.json**. The package will merge both files and will be able to upgrade from scratch to the maximum kernel version, and then to the maximum version of a specific project.
+At the same time, a specific project that is already working and has its own migrations will be able to update its kernel version, and with it it will be updated and **versions.json**. For example, version 4.0.0 will appear there. Then the package will update the kernel, and then the project will have to assign versions >4.0.0 to its migrations
+Placebook\Framework core will not save its versions to file **custom_versions.json**, he is only yours
+This way, the package will work well and automatically with both kernel and project migrations.
 
-## Процесс обновления
-В указанной папке находится файл **db_version.lock**
-В нём хранится текущая версия ядра. Если файла нет, версия интерпретируется как 0
+## Update process
+The specified folder contains the file **db_version.lock**
+It stores the current version of the kernel. If there is no file, version is interpreted as 0
 
-В этой же папке находится файл **updating.lock**. Если он существует, значит идёт обновление, тогда пакет не будет запускать обновление в другом потоке.
-Таким образом, если миграция идёт продолжительное время, то только первый запрос (после заливки новых файлов) запустит миграцию. А остальные входящие запросы будут обрабатываться на той струкруте базы, что есть.
-Пакет считывает все доступные версии и выстраивает их в порядке возрастания. От одной версии к другой нужно идти через все промежуточные.
-Если обновление прервётся, то файл updating.lock останется, и больше обновление не запустится, пока не разобраться в ситуации вручную.
+In the same folder there is a file **updating.lock**. If it exists, then the update is in progress, then the package will not start the update in another thread.
+Thus, if the migration goes on for a long time, then only the first request (after uploading new files) will start the migration. And the rest of the incoming requests will be processed on the base structure that is.
+The package reads all available versions and arranges them in ascending order. From one version to another, you need to go through all the intermediate ones.
+If the update is interrupted, the updating.lock file will remain, and the update will not start again until you sort out the situation manually.
 
 
 
-## Для сайтов
+## For sites
 
-Обновление ядра:
+Kernel update:
 ```php
 namespace Placebook\Framework\Core\Install;
 
 SelfUpdate::$installDir = ROOT . '/install';
-SelfUpdate::updateDbIfLessThen('6.0.0'); // обновление к конкретной версии
-SelfUpdate::updateDbIfLessThen(SelfUpdate::getMaxVersion()); // обновление к максимальной версии
+SelfUpdate::updateDbIfLessThen('6.0.0'); // update to a specific version
+SelfUpdate::updateDbIfLessThen(SelfUpdate::getMaxVersion()); // upgrade to maximum version
 
 
-// updateDbIfLessThen обновляет только вверх. Если нужно откатиться вниз, для этого другой метод:
+// updateDbIfLessThen updates only upwards. If you need to roll back down, there is another method for this:
 $current = SelfUpdate::getDbVersion();
-SelfUpdate::updateFromTo($current, '0.0.7'); // обновление, которое будет работать и вниз
+SelfUpdate::updateFromTo($current, '0.0.7'); // update that will work up and down (downgrade)
 ```
 
-### Добавление миграции
-- Сайту необходимо обернуть миграцию в класс, который реализовывает интерфейс *Placebook\Framework\Core\Install\MigrationInterface*
-- Необходимо добавить название класса и namespace (если он не Placebook\Framework\Core\Install, который по умолчанию) в custom_versions.json под новой версией
-- В классе правильно реализовать как миграцию вверх, так и откат миграции
+### Adding migration
+- The site needs to wrap the migration in a class that implements the interface *Placebook\Framework\Core\Install\MigrationInterface*
+- You need to add the class name and namespace (if it is not Placebook\Framework\Core\Install, which is the default) in custom_versions.json under the new version
+- In the class, it is desirable to implement both upward migration and migration rollback
 
-### Пример класса миграции
+### Migration class example
 ```php
 <?php
 
 namespace Placebook\Framework\Core\Install;
 
-use \Exception;
+use Exception;
 use cri2net\php_pdo_db\PDO_DB;
 
 class Migration_sample implements MigrationInterface
@@ -77,11 +78,12 @@ class Migration_sample implements MigrationInterface
     {
         $pdo = PDO_DB::getPDO();
         try {
+
             $pdo->beginTransaction();
-            // что-то полезное
+            // something useful
             $pdo->commit();
+
         } catch (Exception $e) {
-            // при неудаче откатываем транзакцию
             $pdo->rollBack();
             throw $e;
         }
@@ -91,9 +93,11 @@ class Migration_sample implements MigrationInterface
     {
         $pdo = PDO_DB::getPDO();
         try {
+
             $pdo->beginTransaction();
-            // Откат обновления
+            // Rollback update
             $pdo->commit();
+
         } catch (Exception $e) {
             $pdo->rollBack();
             throw $e;
@@ -102,25 +106,24 @@ class Migration_sample implements MigrationInterface
 }
 ```
 
-## Для пакетов
-Файл с версиями необходим только один, в custom_versions.json нет необходимости. Рекомендуется иметь такую структуру:
+## For packages
+Only one version file is needed, custom_versions.json is not needed. It is recommended to have this structure:
 
 * /vendor/vendor_name/package_name/versions.json
-* /vendor/vendor_name/package_name/\*\*/  любые полезные классы, в том числе с миграциями
+* /vendor/vendor_name/package_name/\*\*/  any useful classes, including those with migrations
 
-На сайте, раз есть модули, можно вынести работу с SelfUpdate в отдельный файл, который будет подключаться для всех запросов.
-Предлагаемое содержимое:
+Since there are modules on the site, you can move the work with SelfUpdate into a separate file that will be connected for all requests.
+Suggested content:
 ```php
 <?php
 namespace Placebook\Framework\Core\Install;
 
-use \Exception;
+use Exception;
 
-// обновление ядра
+// kernel update
 SelfUpdate::$installDir = PROTECTED_DIR . '/install';
-SelfUpdate::updateDbIfLessThen(SelfUpdate::getMaxVersion());
 
-// данные о модулях для обновления
+// data about modules for updating
 $modules = [
     ['vendor' => 'vendor1', 'name' => 'package1'],
     ['vendor' => 'vendor2', 'name' => 'package2'],
@@ -131,19 +134,22 @@ try {
         
         try {
 
-            $versionsDir = PROTECTED_DIR . "/vendor/{$module['vendor']}/" . $module['name']; // путь к папке vendor композера
-            $versions = SelfUpdate::getVersions($versionsDir); // получаем версии пакета
-            $max = SelfUpdate::getMaxVersion($versions); // определяем максимальную версию пакета
-            SelfUpdate::updatePackage($max, $versionsDir, $module['vendor'], $module['name']); // обновляем
+            $versionsDir = PROTECTED_DIR . "/vendor/{$module['vendor']}/" . $module['name']; // path to vendor folder
+            $versions = SelfUpdate::getVersions($versionsDir); // get package versions
+            $max = SelfUpdate::getMaxVersion($versions); // get max version
+            SelfUpdate::updatePackage($max, $versionsDir, $module['vendor'], $module['name']); // update
             
         } catch (Exception $e) {
         }
 
     }
+
+    SelfUpdate::updateDbIfLessThen(SelfUpdate::getMaxVersion());
+
 } catch (Exception $e) {
 }
 ```
 
-Храниться установленные версии модулей будут по пути
+Installed versions of modules will be stored along the path
 install/modules/<vendor_name>/<package_name>.version.lock
-Если модуль имеет миграции в БД и доступен к установке через composer, то при добавлении его как зависимость в проект, будет достаточно один раз добавить его в массив с модулями, и дальше можно обновлять его версии через composer, а изменения в структуре БД будут происходить автоматически
+If a module has migrations to the database and is available for installation through composer, then when you add it as a dependency to the project, it will be enough to add it to the array with modules once, and then you can update its versions through composer, and changes in the database structure will occur automatically

@@ -9,7 +9,8 @@
         }
     ],
     "require": {
-        "php": "^5.4|^7.0"
+        "php": "^7.0",
+        "ext-json": "*"
     },
     "require-dev": {
     },
@@ -18,5 +19,6 @@
             "Placebook\\Framework\\Core\\": "src"
         }
     },
+    "keywords": ["sql", "migrations", "update"],
     "license": "MIT"
 }
