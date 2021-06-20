@@ -138,9 +138,9 @@ class SelfUpdate
 
     /**
      * Returns the next ascending version
-     * @param  string $version  PHP-standardized version
-     * @param  string $rulesDir Path to the folder with versions. OPTIONAL
-     * @return string|null      Next version
+     * @param  string $version   PHP-standardized version
+     * @param  ?string $rulesDir Path to the folder with versions. OPTIONAL
+     * @return ?string           Next version
      */
     public static function getNext(string $version, string $rulesDir = null) : ?string
     {
@@ -282,7 +282,7 @@ class SelfUpdate
      * @param  string $file The path to the file with the saved version
      * @return string PHP standardized version of DB structure
      */
-    public static function getVersionFromFile($file) : string
+    public static function getVersionFromFile(string $file) : string
     {
         if (!file_exists($file)) {
             return '0';
